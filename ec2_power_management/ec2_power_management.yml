@@ -77,7 +77,7 @@
 
     - name: Display current instance states
       ansible.builtin.debug:
-        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | {{ item.tags.hostname | default('(no hostname tag)') }} | current state: {{ item.state.name }}"
+        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | {{ item.tags['hostname'] | default('(no hostname tag)') }} | current state: {{ item.state.name }}"
       loop: "{{ ec2_info.instances }}"
       loop_control:
         label: "{{ item.instance_id }}"
