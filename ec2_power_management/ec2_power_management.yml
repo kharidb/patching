@@ -19,8 +19,8 @@
   # These are overridden at run-time by the AAP Survey.
   # ----------------------------------------------------------
   vars:
-    ec2_instance_ids: "i-0a6af1b04633a7241"        # e.g. "i-0abc123def456, i-0xyz789"
-    ec2_action: "stop"          # "start" or "stop"
+    ec2_instance_ids: "i-0a6af1b04633a7241"        # Comma delimited and in quotes
+    ec2_action: "stop"          # "start" or "stop". "stop by default
     aws_region: "us-east-1"
     wait_for_state: true        # poll until the target state is reached
     wait_timeout: 300           # seconds to wait (ignored when wait=false)
@@ -29,15 +29,6 @@
   # Pre-flight validation
   # ----------------------------------------------------------
   pre_tasks:
-
-    - name: Validate that instance IDs were provided
-      ansible.builtin.assert:
-        that:
-          - ec2_instance_ids is defined
-          - ec2_instance_ids | length > 0
-        fail_msg: >
-          No EC2 instance IDs supplied.
-          Set 'ec2_instance_ids' in the AAP Survey or as an extra var.
 
     - name: Validate that action is 'start' or 'stop'
       ansible.builtin.assert:
@@ -86,7 +77,7 @@
 
     - name: Display current instance states
       ansible.builtin.debug:
-        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | current state: {{ item.state.name }}"
+        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | {{ item.tags.hostname }} | current state: {{ item.state.name }}"
       loop: "{{ ec2_info.instances }}"
       loop_control:
         label: "{{ item.instance_id }}"
