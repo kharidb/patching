@@ -74,15 +74,10 @@
         instance_ids: "{{ instance_id_list }}"
         region: "{{ aws_region }}"
       register: ec2_info
-      
-    - name: Show full tag structure
-      ansible.builtin.debug:
-        var: item.tags
-        loop: "{{ ec2_info.instances }}"
-         
+
     - name: Display current instance states
       ansible.builtin.debug:
-        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | {{ item.tags['hostname'] | default('(no hostname tag)') }} | current state: {{ item.state.name }}"
+        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | {{ item.tags.hostname | default('(no hostname tag)') }} | current state: {{ item.state.name }}"
       loop: "{{ ec2_info.instances }}"
       loop_control:
         label: "{{ item.instance_id }}"
