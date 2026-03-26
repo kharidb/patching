@@ -19,7 +19,7 @@
   # These are overridden at run-time by the AAP Survey.
   # ----------------------------------------------------------
   vars:
-    ec2_instance_ids: ""        # e.g. "i-0abc123def456, i-0xyz789"
+    ec2_instance_ids: "i-0a6af1b04633a7241"        # e.g. "i-0abc123def456, i-0xyz789"
     ec2_action: "stop"          # "start" or "stop"
     aws_region: "us-east-1"
     wait_for_state: true        # poll until the target state is reached
