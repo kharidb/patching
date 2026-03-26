@@ -1,0 +1,78 @@
+# ============================================================
+# Ansible Automation Platform – Job Template Survey Definition
+# ============================================================
+# Import this into AAP via:
+#   awx job_templates modify <template_id> --survey-spec @aap_survey.yml
+#   (or paste into the AAP UI under the Survey tab)
+# ============================================================
+
+name: EC2 Power Management Survey
+description: Prompts the operator to select an action and provide target EC2 instance IDs.
+spec:
+
+  - question_name: "AWS Region"
+    question_description: "AWS region where the target instances reside."
+    variable: aws_region
+    type: multiplechoice
+    required: true
+    default: us-east-1
+    choices:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - eu-west-1
+      - eu-west-2
+      - eu-central-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ca-central-1
+      - sa-east-1
+
+  - question_name: "EC2 Instance IDs"
+    question_description: >
+      One or more EC2 instance IDs to act on.
+      Separate multiple IDs with commas.
+      Example: i-0abc123def456789a, i-0xyz987cba654321b
+    variable: ec2_instance_ids
+    type: text
+    required: true
+    default: ""
+    min: 19    # minimum length of a single valid ID  (i- + 17 hex chars)
+    max: 1024
+
+  - question_name: "Action"
+    question_description: "Choose whether to START or STOP the specified instances."
+    variable: ec2_action
+    type: multiplechoice
+    required: true
+    default: stop
+    choices:
+      - start
+      - stop
+
+  - question_name: "Wait for target state?"
+    question_description: >
+      When enabled, the job waits until the instances reach the target
+      state before completing. Disable for fire-and-forget behaviour.
+    variable: wait_for_state
+    type: multiplechoice
+    required: true
+    default: "true"
+    choices:
+      - "true"
+      - "false"
+
+  - question_name: "Wait timeout (seconds)"
+    question_description: >
+      Maximum seconds to wait for the target state.
+      Only used when 'Wait for target state' is enabled.
+      Minimum: 30  Maximum: 900
+    variable: wait_timeout
+    type: integer
+    required: true
+    default: 300
+    min: 30
+    max: 900
+

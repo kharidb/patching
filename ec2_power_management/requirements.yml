@@ -1,0 +1,13 @@
+# ============================================================
+# Ansible Galaxy / AAP EE – Collection Requirements
+# ============================================================
+# Install locally:   ansible-galaxy collection install -r requirements.yml
+# Used in EE image:  reference this file in execution-environment.yml
+# ============================================================
+
+collections:
+  - name: amazon.aws
+    version: ">=7.0.0"
+
+  - name: community.aws        # optional – provides additional AWS modules
+    version: ">=7.0.0"

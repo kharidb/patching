@@ -1,0 +1,157 @@
+---
+# ============================================================
+# Ansible Automation Platform - EC2 Power Management
+# ============================================================
+# Description : Start or Stop one or more AWS EC2 instances
+#               by Instance ID.
+# Survey vars : ec2_instance_ids  – comma-separated IDs
+#               ec2_action        – "start" | "stop"
+#               aws_region        – e.g. us-east-1
+# ============================================================
+
+- name: EC2 Power Management
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  # ----------------------------------------------------------
+  # Default variable values.
+  # These are overridden at run-time by the AAP Survey.
+  # ----------------------------------------------------------
+  vars:
+    ec2_instance_ids: ""        # e.g. "i-0abc123def456, i-0xyz789"
+    ec2_action: "stop"          # "start" or "stop"
+    aws_region: "us-east-1"
+    wait_for_state: true        # poll until the target state is reached
+    wait_timeout: 300           # seconds to wait (ignored when wait=false)
+
+  # ----------------------------------------------------------
+  # Pre-flight validation
+  # ----------------------------------------------------------
+  pre_tasks:
+
+    - name: Validate that instance IDs were provided
+      ansible.builtin.assert:
+        that:
+          - ec2_instance_ids is defined
+          - ec2_instance_ids | length > 0
+        fail_msg: >
+          No EC2 instance IDs supplied.
+          Set 'ec2_instance_ids' in the AAP Survey or as an extra var.
+
+    - name: Validate that action is 'start' or 'stop'
+      ansible.builtin.assert:
+        that:
+          - ec2_action in ['start', 'stop']
+        fail_msg: >
+          Invalid action '{{ ec2_action }}'.
+          Must be 'start' or 'stop'.
+
+    # Normalise: strip spaces and split the comma-separated string
+    - name: Build clean list of instance IDs
+      ansible.builtin.set_fact:
+        instance_id_list: >-
+          {{ ec2_instance_ids
+             | split(',')
+             | map('trim')
+             | select('match', '^i-[0-9a-f]+$')
+             | list }}
+
+    - name: Confirm at least one valid instance ID remains after parsing
+      ansible.builtin.assert:
+        that:
+          - instance_id_list | length > 0
+        fail_msg: >
+          No valid EC2 instance IDs found after parsing '{{ ec2_instance_ids }}'.
+          IDs must match the pattern i-<hex> (e.g. i-0abc123def456789a).
+
+    - name: Display run parameters
+      ansible.builtin.debug:
+        msg:
+          - "Action      : {{ ec2_action | upper }}"
+          - "Region      : {{ aws_region }}"
+          - "Instance IDs: {{ instance_id_list }}"
+
+  # ----------------------------------------------------------
+  # Main tasks
+  # ----------------------------------------------------------
+  tasks:
+
+    # ---------- Gather current state before acting ----------
+    - name: Gather current EC2 instance information
+      amazon.aws.ec2_instance_info:
+        instance_ids: "{{ instance_id_list }}"
+        region: "{{ aws_region }}"
+      register: ec2_info
+
+    - name: Display current instance states
+      ansible.builtin.debug:
+        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | current state: {{ item.state.name }}"
+      loop: "{{ ec2_info.instances }}"
+      loop_control:
+        label: "{{ item.instance_id }}"
+
+    # ---------- STOP instances ----------
+    - name: Stop EC2 instances
+      amazon.aws.ec2_instance:
+        instance_ids: "{{ instance_id_list }}"
+        region: "{{ aws_region }}"
+        state: stopped
+        wait: "{{ wait_for_state }}"
+        wait_timeout: "{{ wait_timeout }}"
+      register: stop_result
+      when: ec2_action == 'stop'
+
+    - name: Show stop result
+      ansible.builtin.debug:
+        msg: "Stop operation completed. Instances: {{ stop_result.instance_ids | default([]) }}"
+      when: ec2_action == 'stop'
+
+    # ---------- START instances ----------
+    - name: Start EC2 instances
+      amazon.aws.ec2_instance:
+        instance_ids: "{{ instance_id_list }}"
+        region: "{{ aws_region }}"
+        state: running
+        wait: "{{ wait_for_state }}"
+        wait_timeout: "{{ wait_timeout }}"
+      register: start_result
+      when: ec2_action == 'start'
+
+    - name: Show start result
+      ansible.builtin.debug:
+        msg: "Start operation completed. Instances: {{ start_result.instance_ids | default([]) }}"
+      when: ec2_action == 'start'
+
+  # ----------------------------------------------------------
+  # Post-flight: verify final state
+  # ----------------------------------------------------------
+  post_tasks:
+
+    - name: Re-gather instance information after action
+      amazon.aws.ec2_instance_info:
+        instance_ids: "{{ instance_id_list }}"
+        region: "{{ aws_region }}"
+      register: ec2_info_post
+
+    - name: Display final instance states
+      ansible.builtin.debug:
+        msg: "{{ item.instance_id }} | {{ item.tags.Name | default('(no Name tag)') }} | final state: {{ item.state.name }}"
+      loop: "{{ ec2_info_post.instances }}"
+      loop_control:
+        label: "{{ item.instance_id }}"
+
+    - name: Assert all instances reached the expected state
+      ansible.builtin.assert:
+        that:
+          - item.state.name == expected_state
+        fail_msg: >
+          Instance {{ item.instance_id }} is in state '{{ item.state.name }}'
+          but expected '{{ expected_state }}'.
+        success_msg: >
+          Instance {{ item.instance_id }} is confirmed {{ expected_state }}.
+      loop: "{{ ec2_info_post.instances }}"
+      loop_control:
+        label: "{{ item.instance_id }}"
+      vars:
+        expected_state: "{{ 'running' if ec2_action == 'start' else 'stopped' }}"
