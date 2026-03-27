@@ -1,6 +1,6 @@
 ---
 - name: Manage fapolicyd Service on RHEL
-  hosts: all
+  hosts: localhosts
   become: true
 
   tasks:
