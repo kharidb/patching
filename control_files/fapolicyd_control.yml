@@ -1,6 +1,6 @@
 ---
 - name: Manage fapolicyd Service on RHEL
-  hosts: "{{ target_hosts }}"
+  hosts: all
   become: true
 
   tasks:
